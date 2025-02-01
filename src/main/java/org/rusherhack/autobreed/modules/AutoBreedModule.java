@@ -1,10 +1,12 @@
 package org.rusherhack.autobreed.modules;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.animal.*;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.entity.animal.*;
 import org.rusherhack.client.api.RusherHackAPI;
 import org.rusherhack.client.api.events.client.EventUpdate;
 import org.rusherhack.client.api.feature.module.ModuleCategory;
@@ -79,7 +81,10 @@ public class AutoBreedModule extends ToggleableModule {
                             previousHotbarSlot = mc.player.getInventory().selected; // Save current hotbar slot
                         }
                         switchToItem(foodSlot);
-                        ChatUtils.print("Switched to food: " + foodItem);
+
+                        // Interact with the mob after switching to the food item
+                        interactWithMob(animal);
+                        ChatUtils.print("Interacted with: " + animal.getName().getString());
                         return;
                     } else {
                         ChatUtils.print("No valid food slot found.");
@@ -129,6 +134,10 @@ public class AutoBreedModule extends ToggleableModule {
         previousHotbarSlot = -1; // Reset slot tracking
     }
 
+    private void interactWithMob(Animal animal) {
+        if (mc.player == null || animal == null) return;
 
-
+        // Send interaction packet to the server
+        mc.player.connection.send(ServerboundInteractPacket.createInteractionPacket(animal, false, InteractionHand.MAIN_HAND));
+    }
 }
