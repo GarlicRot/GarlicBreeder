@@ -1,12 +1,8 @@
 {
-  "Plugin-Class": "org.example.ExamplePlugin",
+  "Plugin-Class": "org.rusherhack.autobreed.AutoBreedPlugin",
   "Name": "${project.plugin_name}",
   "Version": "${project.plugin_version}",
-  "Description": "Example rusherhack plugin",
-  "Authors": [
-    "John200410"
-  ],
-  "Minecraft-Versions": [
-    "${project.minecraft_version}"
-  ]
+  "Description": "Auto Breeder Plugin",
+  "Authors": ["GarlicRot"],
+  "Minecraft-Versions": ["${project.minecraft_version}"]
 }
