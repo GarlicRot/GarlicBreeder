@@ -14,20 +14,31 @@ import org.rusherhack.client.api.feature.module.ToggleableModule;
 import org.rusherhack.client.api.utils.ChatUtils;
 import org.rusherhack.client.api.utils.InventoryUtils;
 import org.rusherhack.core.event.subscribe.Subscribe;
+import org.rusherhack.core.setting.BooleanSetting;
 import org.rusherhack.core.setting.NumberSetting;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class AutoBreedModule extends ToggleableModule {
     private final Minecraft mc = Minecraft.getInstance();
 
-    private final NumberSetting<Integer> breedRadius = new NumberSetting<>(
-            "Breed Radius", 5, 1, 10);
+    // General Settings
+    private final NumberSetting<Integer> breedRadius = new NumberSetting<>("Breed Radius", 5, 1, 10);
+    private final BooleanSetting prioritizePairs = new BooleanSetting("Prioritize Pairs", true);
+
+    // Mob-Specific Settings
+    private final BooleanSetting breedCows = new BooleanSetting("Breed Cows", true);
+    private final BooleanSetting breedSheep = new BooleanSetting("Breed Sheep", true);
+    private final BooleanSetting breedPigs = new BooleanSetting("Breed Pigs", true);
+    private final BooleanSetting breedChickens = new BooleanSetting("Breed Chickens", true);
+    private final BooleanSetting breedWolves = new BooleanSetting("Breed Wolves", true);
+    private final BooleanSetting breedCats = new BooleanSetting("Breed Cats", true);
 
     private int previousHotbarSlot = -1;
     private int swappedInventorySlot = -1;
     private boolean hasSwitchedItem = false;
+    private final Set<UUID> fedAnimals = new HashSet<>();
+    private final Map<UUID, Long> interactionTimestamps = new HashMap<>();
 
     private static final Map<Class<? extends Animal>, Item> BREEDING_ITEMS = Map.of(
             Cow.class, Items.WHEAT,
@@ -40,13 +51,23 @@ public class AutoBreedModule extends ToggleableModule {
 
     public AutoBreedModule() {
         super("AutoBreed", "Automatically switches to mob food type when in range", ModuleCategory.MISC);
-        this.registerSettings(breedRadius);
+
+        // Create subcategories
+        BooleanSetting generalSettings = new BooleanSetting("General Settings", true);
+        generalSettings.addSubSettings(breedRadius, prioritizePairs);
+
+        BooleanSetting mobSettings = new BooleanSetting("Mobs", true);
+        mobSettings.addSubSettings(breedCows, breedSheep, breedPigs, breedChickens, breedWolves, breedCats);
+
+        this.registerSettings(generalSettings, mobSettings);
     }
 
     @Override
     public void onEnable() {
         RusherHackAPI.getEventBus().subscribe(this);
         ChatUtils.print("AutoBreed enabled!");
+        fedAnimals.clear(); // Reset fed animals on enable
+        interactionTimestamps.clear();
     }
 
     @Override
@@ -60,84 +81,102 @@ public class AutoBreedModule extends ToggleableModule {
     public void onUpdate(EventUpdate event) {
         if (mc.player == null || mc.level == null) return;
 
-        // Find nearby animals
         List<Animal> nearbyAnimals = mc.level.getEntitiesOfClass(Animal.class,
                 mc.player.getBoundingBox().inflate(breedRadius.getValue()));
 
         if (nearbyAnimals.isEmpty()) {
-            revertSlot(); // Revert slot if no mobs are nearby
+            revertSlot();
             return;
         }
 
+        Set<UUID> processedAnimals = new HashSet<>();
+
         for (Animal animal : nearbyAnimals) {
-            if (!animal.isBaby() && !animal.isInLove() && animal.canFallInLove()) {
-                Item foodItem = BREEDING_ITEMS.get(animal.getClass());
-                if (foodItem != null) {
-                    int foodSlot = InventoryUtils.findItem(foodItem, true, false); // Find the food item using RusherHack API
+            if (!shouldBreed(animal) || processedAnimals.contains(animal.getUUID())) continue;
 
-                    // Validate the slot
-                    if ((foodSlot >= 0 && foodSlot <= 8) || (foodSlot >= 9 && foodSlot <= 35)) { // Hotbar or main inventory only
-                        if (!hasSwitchedItem) {
-                            previousHotbarSlot = mc.player.getInventory().selected; // Save current hotbar slot
-                        }
-                        switchToItem(foodSlot);
+            // Delay check to avoid instant failure messages
+            if (interactionTimestamps.containsKey(animal.getUUID()) &&
+                System.currentTimeMillis() - interactionTimestamps.get(animal.getUUID()) < 1000) {
+                continue;
+            }
 
-                        // Interact with the mob after switching to the food item
-                        interactWithMob(animal);
-                        ChatUtils.print("Interacted with: " + animal.getName().getString());
-                        return;
-                    } else {
-                        ChatUtils.print("No valid food slot found.");
+            Animal partner = prioritizePairs.getValue() ? nearbyAnimals.stream()
+                    .filter(other -> other.getClass() == animal.getClass() &&
+                                     !other.isBaby() && !other.isInLove() &&
+                                     other.canFallInLove() && !fedAnimals.contains(other.getUUID()) &&
+                                     !other.getUUID().equals(animal.getUUID()))
+                    .findFirst()
+                    .orElse(null) : null;
+
+            if (prioritizePairs.getValue() && partner == null) {
+                continue;
+            }
+
+            Item foodItem = BREEDING_ITEMS.get(animal.getClass());
+            if (foodItem != null) {
+                int foodSlot = InventoryUtils.findItem(foodItem, true, false);
+
+                if ((foodSlot >= 0 && foodSlot <= 8) || (foodSlot >= 9 && foodSlot <= 35)) {
+                    if (!hasSwitchedItem) {
+                        previousHotbarSlot = mc.player.getInventory().selected;
+                    }
+                    switchToItem(foodSlot);
+                    interactWithMob(animal);
+                    interactionTimestamps.put(animal.getUUID(), System.currentTimeMillis());
+
+                    if (partner != null) {
+                        interactWithMob(partner);
+                        interactionTimestamps.put(partner.getUUID(), System.currentTimeMillis());
                     }
                 }
             }
         }
+        revertSlot();
     }
 
-    private void switchToItem(int slot) {
-        if (slot < 9) {
-            // The item is already in the hotbar; just switch to it
-            mc.player.connection.send(new ServerboundSetCarriedItemPacket(slot));
-        } else if (slot >= 9 && slot <= 35) {
-            // Move the item from the inventory to the hotbar
-            if (previousHotbarSlot != -1) {
-                ChatUtils.print("Swapping inventory slot " + slot + " with hotbar slot " + previousHotbarSlot);
-                InventoryUtils.swapSlots(slot, previousHotbarSlot); // Use RusherHack API for swapping
-                mc.player.connection.send(new ServerboundSetCarriedItemPacket(previousHotbarSlot)); // Switch to the new hotbar slot
-                swappedInventorySlot = slot; // Track the swapped inventory slot
-            }
+
+    private boolean shouldBreed(Animal animal) {
+        if (fedAnimals.contains(animal.getUUID()) || animal.isBaby() || animal.isInLove() || !animal.canFallInLove()) {
+            return false;
         }
-        hasSwitchedItem = true; // Mark that we switched to an item
+        return (animal instanceof Cow && breedCows.getValue()) ||
+               (animal instanceof Sheep && breedSheep.getValue()) ||
+               (animal instanceof Pig && breedPigs.getValue()) ||
+               (animal instanceof Chicken && breedChickens.getValue()) ||
+               (animal instanceof Wolf && breedWolves.getValue()) ||
+               (animal instanceof Cat && breedCats.getValue());
     }
 
     private void revertSlot() {
         if (!hasSwitchedItem) return;
-
-        ChatUtils.print("Reverting to previous slot: " + previousHotbarSlot);
-
         if (swappedInventorySlot != -1) {
-            // Move the item back to its original inventory slot
-            if (swappedInventorySlot >= 9 && swappedInventorySlot <= 35) { // Ensure it's a valid inventory slot
-                ChatUtils.print("Moving item from inventory slot " + swappedInventorySlot + " back to hotbar slot " + previousHotbarSlot);
-                InventoryUtils.swapSlots(swappedInventorySlot, previousHotbarSlot); // Use RusherHack API to swap
-            }
-            swappedInventorySlot = -1; // Clear the swapped slot tracking
+            InventoryUtils.swapSlots(swappedInventorySlot, previousHotbarSlot);
+            swappedInventorySlot = -1;
         }
-
-        if (previousHotbarSlot >= 0 && previousHotbarSlot <= 8) { // Ensure valid hotbar slot
-            mc.player.connection.send(new ServerboundSetCarriedItemPacket(previousHotbarSlot)); // Switch back to original hotbar slot
-            mc.player.getInventory().selected = previousHotbarSlot; // Update the local inventory state
+        if (previousHotbarSlot >= 0 && previousHotbarSlot <= 8) {
+            mc.player.connection.send(new ServerboundSetCarriedItemPacket(previousHotbarSlot));
+            mc.player.getInventory().selected = previousHotbarSlot;
             ChatUtils.print("Successfully switched back to slot: " + previousHotbarSlot);
         }
-
         hasSwitchedItem = false;
-        previousHotbarSlot = -1; // Reset slot tracking
+        previousHotbarSlot = -1;
+    }
+
+    private void switchToItem(int slot) {
+        if (slot < 9) {
+            mc.player.connection.send(new ServerboundSetCarriedItemPacket(slot));
+        } else if (slot >= 9 && slot <= 35) {
+            if (previousHotbarSlot != -1) {
+                InventoryUtils.swapSlots(slot, previousHotbarSlot);
+                mc.player.connection.send(new ServerboundSetCarriedItemPacket(previousHotbarSlot));
+                swappedInventorySlot = slot;
+            }
+        }
+        hasSwitchedItem = true;
     }
 
     private void interactWithMob(Animal animal) {
         if (mc.player == null || animal == null) return;
-
-        // Send interaction packet to the server
         mc.player.connection.send(ServerboundInteractPacket.createInteractionPacket(animal, false, InteractionHand.MAIN_HAND));
     }
 }
