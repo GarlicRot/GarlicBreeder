@@ -5,6 +5,8 @@ import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.animal.*;
+import net.minecraft.world.entity.animal.horse.Horse;
+import net.minecraft.world.entity.animal.horse.Llama;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import org.rusherhack.client.api.RusherHackAPI;
@@ -22,17 +24,20 @@ import java.util.*;
 public class AutoBreedModule extends ToggleableModule {
     private final Minecraft mc = Minecraft.getInstance();
 
-    // General Settings
     private final NumberSetting<Integer> breedRadius = new NumberSetting<>("Breed Radius", 5, 1, 10);
     private final BooleanSetting prioritizePairs = new BooleanSetting("Prioritize Pairs", true);
 
-    // Mob-Specific Settings
     private final BooleanSetting breedCows = new BooleanSetting("Breed Cows", true);
     private final BooleanSetting breedSheep = new BooleanSetting("Breed Sheep", true);
     private final BooleanSetting breedPigs = new BooleanSetting("Breed Pigs", true);
     private final BooleanSetting breedChickens = new BooleanSetting("Breed Chickens", true);
     private final BooleanSetting breedWolves = new BooleanSetting("Breed Wolves", true);
     private final BooleanSetting breedCats = new BooleanSetting("Breed Cats", true);
+    private final BooleanSetting breedHorses = new BooleanSetting("Breed Horses", true);
+    private final BooleanSetting breedLlamas = new BooleanSetting("Breed Llamas", true);
+    private final BooleanSetting breedFoxes = new BooleanSetting("Breed Foxes", true);
+    private final BooleanSetting breedPandas = new BooleanSetting("Breed Pandas", true);
+    private final BooleanSetting breedTurtles = new BooleanSetting("Breed Turtles", true);
     private final BooleanSetting feedBabies = new BooleanSetting("Feed Babies", false);
 
     private int previousHotbarSlot = -1;
@@ -41,14 +46,21 @@ public class AutoBreedModule extends ToggleableModule {
     private final Set<UUID> fedAnimals = new HashSet<>();
     private final Map<UUID, Long> interactionTimestamps = new HashMap<>();
 
-    private static final Map<Class<? extends Animal>, Item> BREEDING_ITEMS = Map.of(
-            Cow.class, Items.WHEAT,
-            Sheep.class, Items.WHEAT,
-            Pig.class, Items.CARROT,
-            Chicken.class, Items.WHEAT_SEEDS,
-            Wolf.class, Items.BEEF,
-            Cat.class, Items.COD
-    );
+    private static final Map<Class<? extends Animal>, List<Item>> BREEDING_ITEMS = new HashMap<>();
+
+    static {
+        BREEDING_ITEMS.put(Cow.class, Arrays.asList(Items.WHEAT));
+        BREEDING_ITEMS.put(Sheep.class, Arrays.asList(Items.WHEAT));
+        BREEDING_ITEMS.put(Pig.class, Arrays.asList(Items.CARROT, Items.POTATO, Items.BEETROOT));
+        BREEDING_ITEMS.put(Chicken.class, Arrays.asList(Items.WHEAT_SEEDS, Items.BEETROOT_SEEDS, Items.PUMPKIN_SEEDS, Items.MELON_SEEDS));
+        BREEDING_ITEMS.put(Wolf.class, Arrays.asList(Items.BEEF, Items.CHICKEN, Items.COOKED_BEEF, Items.COOKED_CHICKEN, Items.PORKCHOP, Items.COOKED_PORKCHOP));
+        BREEDING_ITEMS.put(Cat.class, Arrays.asList(Items.COD, Items.SALMON));
+        BREEDING_ITEMS.put(Horse.class, Arrays.asList(Items.GOLDEN_CARROT, Items.GOLDEN_APPLE));
+        BREEDING_ITEMS.put(Llama.class, Arrays.asList(Items.HAY_BLOCK));
+        BREEDING_ITEMS.put(Fox.class, Arrays.asList(Items.SWEET_BERRIES, Items.GLOW_BERRIES));
+        BREEDING_ITEMS.put(Panda.class, Arrays.asList(Items.BAMBOO));
+        BREEDING_ITEMS.put(Turtle.class, Arrays.asList(Items.SEAGRASS));
+    }
 
     public AutoBreedModule() {
         super("AutoBreed", "Automatically breeds and feeds animals", ModuleCategory.MISC);
@@ -57,10 +69,12 @@ public class AutoBreedModule extends ToggleableModule {
         generalSettings.addSubSettings(breedRadius, prioritizePairs);
 
         BooleanSetting mobSettings = new BooleanSetting("Mobs", true);
-        mobSettings.addSubSettings(breedCows, breedSheep, breedPigs, breedChickens, breedWolves, breedCats, feedBabies);
+        mobSettings.addSubSettings(breedCows, breedSheep, breedPigs, breedChickens, breedWolves, breedCats, breedHorses, breedLlamas, breedFoxes, breedPandas, breedTurtles, feedBabies);
 
         this.registerSettings(generalSettings, mobSettings);
-    }
+}
+
+
 
     @Override
     public void onEnable() {
@@ -97,7 +111,9 @@ public class AutoBreedModule extends ToggleableModule {
                 continue;
             }
 
-            Item foodItem = BREEDING_ITEMS.get(animal.getClass());
+            List<Item> foodItems = BREEDING_ITEMS.get(animal.getClass());
+            if (foodItems == null || foodItems.isEmpty()) continue;
+            Item foodItem = foodItems.get(0); // Select the first item from the list
             if (foodItem == null) continue;
             
             int foodSlot = InventoryUtils.findItem(foodItem, true, false);
