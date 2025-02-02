@@ -59,7 +59,7 @@ public class AutoBreedModule extends ToggleableModule {
     private final BooleanSetting breedCamels     = new BooleanSetting("Camels", true);
     private final BooleanSetting breedAxolotls   = new BooleanSetting("Axolotls", true);
 
-    // Taming toggles (only wolves and cats in your snippet)
+    // Taming toggles
     private final BooleanSetting autoTameWolves = new BooleanSetting("Wolves", false);
     private final BooleanSetting autoTameCats   = new BooleanSetting("Cats", false);
 
@@ -72,7 +72,7 @@ public class AutoBreedModule extends ToggleableModule {
     private int swappedInventorySlot = -1;
     private boolean hasSwitchedItem = false;
 
-    // Example: flowers for Bees
+    // Flowers for Bees
     private static final List<Item> BEE_FLOWERS = Arrays.asList(
         Items.DANDELION, Items.POPPY, Items.BLUE_ORCHID, Items.ALLIUM, Items.AZURE_BLUET,
         Items.RED_TULIP, Items.ORANGE_TULIP, Items.WHITE_TULIP, Items.PINK_TULIP,
@@ -217,10 +217,10 @@ public class AutoBreedModule extends ToggleableModule {
         // If user toggled feedBabies, we assume we feed them non-stop
         if (!feedBabies.getValue()) return;
 
-        // Attempt up to 20 feeds. Adjust this if you want more or less spam.
+        // Attempt up to 20 feeds.
         for (int i = 0; i < 20; i++) {
             if (!tryFeedAnimal(baby)) {
-                break; // no more items or no more feed
+                break; // no more items
             }
         }
         // We do NOT add them to fedAnimals or record a timestamp => can feed next tick too
