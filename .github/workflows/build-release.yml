@@ -79,10 +79,14 @@ jobs:
       - name: Build GarlicBreeder Plugin (1.20.4)
         run: ./gradlew build
 
-      - name: Rename and Upload artifact
+      - name: Rename artifact if needed
         run: |
           VERSION=$(cat version.txt)
-          mv build/libs/GarlicBreeder-*.jar build/libs/GarlicBreeder-$VERSION.jar
+          JAR_FILE=$(ls build/libs/GarlicBreeder-*.jar | head -n 1)
+
+          if [[ "$JAR_FILE" != "build/libs/GarlicBreeder-$VERSION.jar" ]]; then
+            mv "$JAR_FILE" "build/libs/GarlicBreeder-$VERSION.jar"
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
