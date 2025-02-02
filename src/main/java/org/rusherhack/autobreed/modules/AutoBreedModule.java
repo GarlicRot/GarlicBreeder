@@ -445,6 +445,10 @@ public class AutoBreedModule extends ToggleableModule {
         hasSwitchedItem = true;
     }
 
+    public Map<UUID, Long> getInteractionTimestamps() {
+        return this.interactionTimestamps;
+    }
+
     private void revertSlot() {
         if (!hasSwitchedItem) return;
 
