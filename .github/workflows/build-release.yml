@@ -28,17 +28,67 @@ jobs:
           java-version: "17"
           distribution: "temurin"
 
+      - name: Increment Plugin Version in gradle.properties
+        run: |
+          # Read the current plugin_version
+          current_version=$(grep '^plugin_version' gradle.properties | cut -d'=' -f2 | tr -d ' ')
+
+          # Split version into parts
+          IFS='.' read -r major minor patch <<< "$current_version"
+
+          # Increment the patch version
+          new_patch=$((patch + 1))
+
+          # Handle patch overflow
+          if [ "$new_patch" -gt 9 ]; then
+            new_patch=0
+            new_minor=$((minor + 1))
+          else
+            new_minor=$minor
+          fi
+
+          # Handle minor overflow
+          if [ "$new_minor" -gt 9 ]; then
+            new_minor=0
+            new_major=$((major + 1))
+          else
+            new_major=$major
+          fi
+
+          new_version="$new_major.$new_minor.$new_patch"
+
+          # Update gradle.properties
+          sed -i "s/^plugin_version.*/plugin_version=$new_version/" gradle.properties
+
+          # Save the new version to a file
+          echo "$new_version" > version.txt
+
+          # Commit and push the version change
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add gradle.properties
+          git commit -m "Bump plugin version to $new_version"
+          git push origin master
+
+      - name: Save version for next job
+        uses: actions/upload-artifact@v4
+        with:
+          name: version
+          path: version.txt
+
       - name: Build GarlicBreeder Plugin (1.20.4)
         run: ./gradlew build
 
       - name: Rename and Upload artifact
-        run: mv build/libs/GarlicBreeder-*.jar build/libs/GarlicBreeder-1.20.4.jar
+        run: |
+          VERSION=$(cat version.txt)
+          mv build/libs/GarlicBreeder-*.jar build/libs/GarlicBreeder-$VERSION.jar
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: GarlicBreeder
-          path: build/libs/GarlicBreeder-1.20.4.jar
+          path: build/libs/GarlicBreeder-*.jar
 
   release:
     needs: build
@@ -51,64 +101,26 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v4
 
+      - name: Download version info
+        uses: actions/download-artifact@v4
+        with:
+          name: version
+
+      - name: Read version
+        id: read_version
+        run: echo "NEW_VERSION=$(cat version.txt)" >> $GITHUB_ENV
+
       - name: Download built artifact
         uses: actions/download-artifact@v4
         with:
           name: GarlicBreeder
           path: GarlicBreeder
 
-      - name: Get and increment latest tag
-        id: versioning
-        run: |
-          # Fetch all tags
-          git fetch --tags --force
-
-          # Get the latest tag
-          latest_tag=$(git describe --tags $(git rev-list --tags --max-count=1) || echo "v0.0.0")
-          echo "Latest tag: $latest_tag"
-
-          # Remove 'v' prefix and split version into parts
-          version=${latest_tag#v}
-          IFS='.' read -r major minor patch <<< "$version"
-
-          # Increment patch version by 1
-          new_patch=$((patch + 1))
-          new_minor=$minor
-          new_major=$major
-
-          # Check if patch exceeds 9
-          if [ "$new_patch" -gt 9 ]; then
-            new_patch=0
-            new_minor=$((minor + 1))
-          fi
-
-          # Check if minor exceeds 9
-          if [ "$new_minor" -gt 9 ]; then
-            new_minor=0
-            new_major=$((major + 1))
-          fi
-
-          new_tag="v$new_major.$new_minor.$new_patch"
-
-          echo "New tag: $new_tag"
-          echo "NEW_TAG=$new_tag" >> $GITHUB_ENV
-          echo "::set-output name=NEW_TAG::$new_tag" # ✅ Ensure the tag is set as output
-
-      - name: Create and push new tag
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git fetch --unshallow --tags
-          git tag ${{ steps.versioning.outputs.NEW_TAG }}
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ${{ steps.versioning.outputs.NEW_TAG }}
-
       - name: Create GitHub Release
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "${{ steps.versioning.outputs.NEW_TAG }}"
+          automatic_release_tag: "v${{ steps.read_version.outputs.NEW_VERSION }}"
           prerelease: false
           files: |
-            GarlicBreeder/GarlicBreeder-1.20.4.jar
+            GarlicBreeder/GarlicBreeder-${{ steps.read_version.outputs.NEW_VERSION }}.jar
