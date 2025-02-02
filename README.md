@@ -55,7 +55,7 @@
 
 ## **🔧 Installation**
 
-1. Download the latest release from the **[Releases](https://github.com/GarlicRot/AutoBreeder/releases)** page.
+1. Download the latest release from the **[Releases](https://github.com/GarlicRot/GarlicBreeder/releases)** page.
 2. Place the `.jar` file in your `rusherhacks/plugins` folder.
 3. Launch Minecraft with **RusherHacks** installed.
 4. Enable the **AutoBreed Module** and/or **AutoBreeder HUD Element**
