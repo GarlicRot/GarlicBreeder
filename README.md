@@ -60,6 +60,10 @@
 3. Launch Minecraft with **RusherHacks** installed.
 4. Enable the **AutoBreed Module** and/or **AutoBreeder HUD Element**
 
+## 📜 Changelog
+
+Stay updated with all changes and improvements by checking the [CHANGELOG.md](CHANGELOG.md) file. Each release documents the added features, bug fixes, and other updates to the plugin.
+
 ## 🐛 Reporting Issues
 
 If you encounter bugs or have feature requests, please use the appropriate [issue templates](https://github.com/GarlicRot/GarlicBreeder/issues/new/choose) provided in the repository:
