@@ -6,6 +6,7 @@ import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.*;
+import net.minecraft.world.entity.animal.axolotl.Axolotl;
 import net.minecraft.world.entity.animal.camel.Camel;
 import net.minecraft.world.entity.animal.frog.Frog;
 import net.minecraft.world.entity.animal.goat.Goat;
@@ -56,6 +57,7 @@ public class AutoBreedModule extends ToggleableModule {
     private final BooleanSetting breedRabbits    = new BooleanSetting("Rabbits", true);
     private final BooleanSetting breedSniffers   = new BooleanSetting("Sniffers", true);
     private final BooleanSetting breedCamels     = new BooleanSetting("Camels", true);
+    private final BooleanSetting breedAxolotls   = new BooleanSetting("Axolotls", true);
 
     // Taming toggles (only wolves and cats in your snippet)
     private final BooleanSetting autoTameWolves = new BooleanSetting("Wolves", false);
@@ -105,6 +107,7 @@ public class AutoBreedModule extends ToggleableModule {
         BREEDING_ITEMS.put(Rabbit.class, Arrays.asList(Items.CARROT, Items.GOLDEN_CARROT, Items.DANDELION));
         BREEDING_ITEMS.put(Sniffer.class, Collections.singletonList(Items.TORCHFLOWER_SEEDS));
         BREEDING_ITEMS.put(Camel.class, Collections.singletonList(Items.CACTUS));
+        BREEDING_ITEMS.put(Axolotl.class, Collections.singletonList(Items.TROPICAL_FISH_BUCKET));
     }
 
     // For taming
@@ -126,7 +129,7 @@ public class AutoBreedModule extends ToggleableModule {
             breedCows, breedSheep, breedPigs, breedChickens, breedWolves,
             breedCats, breedFoxes, breedPandas, breedTurtles, breedBees,
             breedFrogs, breedGoats, breedHoglins, breedStriders,
-            breedMooshrooms, breedRabbits, breedSniffers, breedCamels
+            breedMooshrooms, breedRabbits, breedSniffers, breedCamels, breedAxolotls
         );
 
         BooleanSetting tamingSettings = new BooleanSetting("Taming", true);
@@ -324,7 +327,8 @@ public class AutoBreedModule extends ToggleableModule {
 
     /**
      * Attempt feeding once with the first matching breeding item found.
-     * Returns true if we successfully fed the animal this time.
+     * If feeding an Axolotl, ensure it's released after being picked up.
+     * Returns true if the animal was successfully fed.
      */
     private boolean tryFeedAnimal(Animal animal) {
         List<Item> items = BREEDING_ITEMS.get(animal.getClass());
@@ -337,17 +341,49 @@ public class AutoBreedModule extends ToggleableModule {
             if (slot >= 0) {
                 switchToItem(slot);
 
+                // Send packet to interact with the animal (feed it)
                 mc.player.connection.send(
                     ServerboundInteractPacket.createInteractionPacket(animal, false, InteractionHand.MAIN_HAND)
                 );
-                // Swing the arm so the server sees a “use” animation
+                // Swing the arm so the server sees a "use" animation
                 mc.player.swing(InteractionHand.MAIN_HAND);
 
+                // Special case for Axolotls: If we end up holding an Axolotl in a bucket, release it
+                if (animal instanceof Axolotl) {
+                    handleAxolotlRelease();
+                }
+                
                 return true;
             }
         }
         return false;
     }
+
+    /**
+     * Releases an Axolotl from a bucket and puts the empty bucket back into the original slot.
+     */
+    private void handleAxolotlRelease() {
+        int bucketSlot = InventoryUtils.findItem(Items.AXOLOTL_BUCKET, true, false);
+        if (bucketSlot >= 0) {
+            switchToItem(bucketSlot);
+
+            // Use the bucket (right-click to release Axolotl)
+            mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+            mc.player.swing(InteractionHand.MAIN_HAND);
+
+            // Wait a tick for the item to update in inventory
+            mc.execute(() -> {
+                int emptyBucketSlot = InventoryUtils.findItem(Items.BUCKET, true, false);
+                if (emptyBucketSlot >= 0) {
+                    // Switch back to the empty bucket to put it in the slot
+                    switchToItem(emptyBucketSlot);
+                }
+            });
+        }
+    }
+
+
+
 
     /**
      * Only applies a 1-second cooldown to adults (since we want babies fed instantly).
@@ -396,6 +432,7 @@ public class AutoBreedModule extends ToggleableModule {
         if (animal instanceof Rabbit)      return breedRabbits.getValue();
         if (animal instanceof Sniffer)     return breedSniffers.getValue();
         if (animal instanceof Camel)       return breedCamels.getValue();
+        if (animal instanceof Axolotl)     return breedAxolotls.getValue();
         return false;
     }
 
