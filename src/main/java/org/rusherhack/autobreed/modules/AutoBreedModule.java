@@ -58,8 +58,8 @@ public class AutoBreedModule extends ToggleableModule {
     private final BooleanSetting breedCamels     = new BooleanSetting("Camels", true);
 
     // Taming toggles (only wolves and cats in your snippet)
-    private final BooleanSetting autoTameWolves = new BooleanSetting("Tame Wolves", false);
-    private final BooleanSetting autoTameCats   = new BooleanSetting("Tame Cats", false);
+    private final BooleanSetting autoTameWolves = new BooleanSetting("Wolves", false);
+    private final BooleanSetting autoTameCats   = new BooleanSetting("Cats", false);
 
     // Track which animals are fed & cooldown
     private final Set<UUID> fedAnimals = new HashSet<>();
