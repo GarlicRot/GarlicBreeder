@@ -70,7 +70,7 @@ jobs:
           git commit -m "Bump plugin version to $new_version"
           git push origin master
 
-      - name: Save version for next job
+      - name: Upload version file
         uses: actions/upload-artifact@v4
         with:
           name: version
@@ -83,12 +83,13 @@ jobs:
         run: |
           VERSION=$(cat version.txt)
           JAR_FILE=$(ls build/libs/GarlicBreeder-*.jar | head -n 1)
-
-          if [[ "$JAR_FILE" != "build/libs/GarlicBreeder-$VERSION.jar" ]]; then
-            mv "$JAR_FILE" "build/libs/GarlicBreeder-$VERSION.jar"
+          if [[ -z "$JAR_FILE" ]]; then
+            echo "Error: No JAR file found!"
+            exit 1
           fi
+          mv "$JAR_FILE" "build/libs/GarlicBreeder-$VERSION.jar"
 
-      - name: Upload artifact
+      - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
           name: GarlicBreeder
@@ -105,7 +106,7 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v4
 
-      - name: Download version info
+      - name: Download version file
         uses: actions/download-artifact@v4
         with:
           name: version
@@ -113,6 +114,7 @@ jobs:
       - name: Read version
         id: read_version
         run: echo "NEW_VERSION=$(cat version.txt)" >> $GITHUB_ENV
+        shell: bash
 
       - name: Download built artifact
         uses: actions/download-artifact@v4
