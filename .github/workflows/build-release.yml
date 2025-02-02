@@ -83,11 +83,17 @@ jobs:
         run: |
           VERSION=$(cat version.txt)
           JAR_FILE=$(ls build/libs/GarlicBreeder-*.jar | head -n 1)
+
           if [[ -z "$JAR_FILE" ]]; then
             echo "Error: No JAR file found!"
             exit 1
           fi
-          mv "$JAR_FILE" "build/libs/GarlicBreeder-$VERSION.jar"
+
+          EXPECTED_NAME="build/libs/GarlicBreeder-$VERSION.jar"
+
+          if [[ "$JAR_FILE" != "$EXPECTED_NAME" ]]; then
+            mv "$JAR_FILE" "$EXPECTED_NAME"
+          fi
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
