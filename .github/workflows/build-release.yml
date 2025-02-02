@@ -1,0 +1,113 @@
+name: Build and Release GarlicBreeder
+
+on:
+  workflow_dispatch: # Allows manual triggering of the workflow
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out master branch
+        uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Set executable permissions for Gradle wrapper
+        run: chmod +x ./gradlew
+
+      - name: Verify Gradle Wrapper
+        run: ./gradlew --version
+
+      - name: Gradle Wrapper Verification
+        uses: gradle/wrapper-validation-action@v1
+
+      - name: Setup JDK for Java 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Build GarlicBreeder Plugin (1.20.4)
+        run: ./gradlew build
+
+      - name: Rename and Upload artifact
+        run: mv build/libs/GarlicBreeder-*.jar build/libs/GarlicBreeder-1.20.4.jar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GarlicBreeder
+          path: build/libs/GarlicBreeder-1.20.4.jar
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Download built artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: GarlicBreeder
+          path: GarlicBreeder
+
+      - name: Get and increment latest tag
+        id: versioning
+        run: |
+          # Fetch all tags
+          git fetch --tags --force
+
+          # Get the latest tag
+          latest_tag=$(git describe --tags $(git rev-list --tags --max-count=1) || echo "v0.0.0")
+          echo "Latest tag: $latest_tag"
+
+          # Remove 'v' prefix and split version into parts
+          version=${latest_tag#v}
+          IFS='.' read -r major minor patch <<< "$version"
+
+          # Increment patch version by 1
+          new_patch=$((patch + 1))
+          new_minor=$minor
+          new_major=$major
+
+          # Check if patch exceeds 9
+          if [ "$new_patch" -gt 9 ]; then
+            new_patch=0
+            new_minor=$((minor + 1))
+          fi
+
+          # Check if minor exceeds 9
+          if [ "$new_minor" -gt 9 ]; then
+            new_minor=0
+            new_major=$((major + 1))
+          fi
+
+          new_tag="v$new_major.$new_minor.$new_patch"
+
+          echo "New tag: $new_tag"
+          echo "NEW_TAG=$new_tag" >> $GITHUB_ENV
+
+      - name: Create and push new tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git fetch --unshallow --tags
+          git tag ${{ steps.versioning.outputs.NEW_TAG }}
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ${{ steps.versioning.outputs.NEW_TAG }}
+
+      - name: Create GitHub Release
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "${{ steps.versioning.outputs.NEW_TAG }}"
+          prerelease: false
+          files: |
+            GarlicBreeder/GarlicBreeder-1.20.4.jar
