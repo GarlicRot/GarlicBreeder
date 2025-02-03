@@ -104,9 +104,6 @@ jobs:
           echo "NEW_VERSION=$(cat version.txt)" >> $GITHUB_ENV
         shell: bash
 
-      - name: Debug Version
-        run: echo "Version: $NEW_VERSION"
-
       - name: Download built artifact
         uses: actions/download-artifact@v4
         with:
