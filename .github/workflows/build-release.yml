@@ -1,7 +1,7 @@
 name: Build and Release GarlicBreeder
 
 on:
-  workflow_dispatch: # Allows manual triggering of the workflow
+  workflow_dispatch:
 
 jobs:
   build:
@@ -30,40 +30,24 @@ jobs:
 
       - name: Increment Plugin Version in gradle.properties
         run: |
-          # Read the current plugin_version
           current_version=$(grep '^plugin_version' gradle.properties | cut -d'=' -f2 | tr -d ' ')
-
-          # Split version into parts
           IFS='.' read -r major minor patch <<< "$current_version"
-
-          # Increment the patch version
           new_patch=$((patch + 1))
-
-          # Handle patch overflow
           if [ "$new_patch" -gt 9 ]; then
             new_patch=0
             new_minor=$((minor + 1))
           else
             new_minor=$minor
           fi
-
-          # Handle minor overflow
           if [ "$new_minor" -gt 9 ]; then
             new_minor=0
             new_major=$((major + 1))
           else
             new_major=$major
           fi
-
           new_version="$new_major.$new_minor.$new_patch"
-
-          # Update gradle.properties
           sed -i "s/^plugin_version.*/plugin_version=$new_version/" gradle.properties
-
-          # Save the new version to a file
           echo "$new_version" > version.txt
-
-          # Commit and push the version change
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add gradle.properties
@@ -83,17 +67,15 @@ jobs:
         run: |
           VERSION=$(cat version.txt)
           JAR_FILE=$(ls build/libs/GarlicBreeder-*.jar | head -n 1)
-
           if [[ -z "$JAR_FILE" ]]; then
             echo "Error: No JAR file found!"
             exit 1
           fi
-
-          EXPECTED_NAME="build/libs/GarlicBreeder-$VERSION.jar"
-
+          EXPECTED_NAME="build/libs/GarlicBreeder-${VERSION}.jar"
           if [[ "$JAR_FILE" != "$EXPECTED_NAME" ]]; then
             mv "$JAR_FILE" "$EXPECTED_NAME"
           fi
+          echo "Renamed $JAR_FILE to $EXPECTED_NAME"
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
@@ -118,9 +100,10 @@ jobs:
           name: version
 
       - name: Read version
-        id: read_version
         run: echo "NEW_VERSION=$(cat version.txt)" >> $GITHUB_ENV
-        shell: bash
+
+      - name: Debug Version
+        run: echo "Version: $NEW_VERSION"
 
       - name: Download built artifact
         uses: actions/download-artifact@v4
@@ -132,7 +115,7 @@ jobs:
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "v${{ steps.read_version.outputs.NEW_VERSION }}"
+          automatic_release_tag: "v${{ env.NEW_VERSION }}"
           prerelease: false
           files: |
-            GarlicBreeder/GarlicBreeder-${{ steps.read_version.outputs.NEW_VERSION }}.jar
+            GarlicBreeder/GarlicBreeder-${{ env.NEW_VERSION }}.jar
