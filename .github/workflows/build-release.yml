@@ -101,6 +101,7 @@ jobs:
 
       - name: Read version
         run: echo "NEW_VERSION=$(cat version.txt)" >> $GITHUB_ENV
+        shell: bash
 
       - name: Debug Version
         run: echo "Version: $NEW_VERSION"
