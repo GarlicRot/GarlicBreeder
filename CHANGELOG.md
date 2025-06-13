@@ -1,4 +1,4 @@
-# 📜 Changelog
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [1.0.1] - 2025-06-12  
 [1.0.1]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.1  
 
-### 🚀 Compatibility Update  
+### Compatibility Update  
 - Added `2b` branch support for:
   - **Minecraft 1.21.4**
   - **Java 21**
@@ -21,9 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [1.0.0] - 2025-02-02  
 [1.0.0]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.0  
 
-### 🔥 Initial Release  
+### Initial Release  
 
-### 🐾 **AutoBreed Module**  
+### **AutoBreed Module**  
 - **Automatic Breeding**:  
   - Detects nearby breedable mobs and switches to the correct food type.  
   - Breeds mobs automatically when they can fall in love.  
@@ -46,7 +46,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Breeding Radius Setting**:  
   - Adjustable detection range for finding breedable mobs.  
 
-### 🖥️ **AutoBreeder HUD Element**  
+### **AutoBreeder HUD Element**  
 - **Displays Breeding Cooldown**:  
   - Shows time left before an animal can breed again.  
   - Supports **multiple time formats**: Seconds, Minutes, or Both.  
@@ -56,4 +56,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
-This marks the **first release** of GarlicBreeder! 🎉 Enjoy automatic breeding and taming in Minecraft!
+This marks the **first release** of GarlicBreeder! Enjoy automatic breeding and taming in Minecraft!
