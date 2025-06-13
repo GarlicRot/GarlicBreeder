@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [1.0.1] - 2025-06-12  
+[1.0.1]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.1  
+
+### 🚀 Compatibility Update  
+- Added `2b` branch support for:
+  - **Minecraft 1.21.4**
+  - **Java 21**
+- No changes were made to the plugin logic.
+- Artifact: `GarlicBreeder-1.21.4.jar`
+
+---
+
 ## [1.0.0] - 2025-02-02  
 [1.0.0]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.0  
 
