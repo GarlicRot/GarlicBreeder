@@ -1,120 +1,152 @@
-name: Build and Release GarlicBreeder
+name: Build and Release Plugin
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-master:
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Check out master branch
+      - name: Checkout master branch
         uses: actions/checkout@v4
         with:
           ref: master
 
-      - name: Set executable permissions for Gradle wrapper
+      - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Verify Gradle Wrapper
-        run: ./gradlew --version
-
-      - name: Gradle Wrapper Verification
-        uses: gradle/wrapper-validation-action@v1
+      - name: Update plugin version in gradle.properties
+        run: |
+          git fetch --tags --force
+          latest_tag=$(git describe --tags $(git rev-list --tags --max-count=1) || echo "v0.0.0")
+          version=${latest_tag#v}
+          IFS='.' read -r major minor patch <<< "$version"
+          new_patch=$((patch + 1))
+          new_version="$major.$minor.$new_patch"
+          sed -i "s/^plugin_version = .*/plugin_version = $new_version/" gradle.properties
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add gradle.properties
+          git commit -m "Update plugin version to $new_version"
+          git push origin master
+          echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
 
       - name: Setup JDK for Java 17
         uses: actions/setup-java@v3
         with:
-          java-version: "17"
-          distribution: "temurin"
+          java-version: '17'
+          distribution: 'temurin'
 
-      - name: Increment Plugin Version in gradle.properties
+      - name: Build Plugin for master (1.20.4)
+        run: ./gradlew build
+
+      - name: Rename and Upload artifact for master branch (1.20.4)
+        run: mv build/libs/GarlicBreeder-*.jar build/libs/GarlicBreeder-1.20.4.jar
+
+      - name: Upload artifact for master
+        uses: actions/upload-artifact@v4
+        with:
+          name: GarlicBreeder-master
+          path: build/libs/GarlicBreeder-1.20.4.jar
+
+  build-2b:
+    needs: build-master
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout 2b branch
+        uses: actions/checkout@v4
+        with:
+          ref: 2b
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Update plugin version in gradle.properties
         run: |
-          current_version=$(grep '^plugin_version' gradle.properties | cut -d'=' -f2 | tr -d ' ')
-          IFS='.' read -r major minor patch <<< "$current_version"
+          git fetch --tags --force
+          latest_tag=$(git describe --tags $(git rev-list --tags --max-count=1) || echo "v0.0.0")
+          version=${latest_tag#v}
+          IFS='.' read -r major minor patch <<< "$version"
           new_patch=$((patch + 1))
-          if [ "$new_patch" -gt 9 ]; then
-            new_patch=0
-            new_minor=$((minor + 1))
-          else
-            new_minor=$minor
-          fi
-          if [ "$new_minor" -gt 9 ]; then
-            new_minor=0
-            new_major=$((major + 1))
-          else
-            new_major=$major
-          fi
-          new_version="$new_major.$new_minor.$new_patch"
-          sed -i "s/^plugin_version.*/plugin_version=$new_version/" gradle.properties
-          echo "$new_version" > version.txt
+          new_version="$major.$minor.$new_patch"
+          sed -i "s/^plugin_version = .*/plugin_version = $new_version/" gradle.properties
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add gradle.properties
-          git commit -m "Bump plugin version to $new_version"
-          git push origin master
+          git commit -m "Update plugin version to $new_version"
+          git push origin 2b
+          echo "NEW_VERSION=$new_version" >> $GITHUB_ENV
 
-      - name: Upload version file
-        uses: actions/upload-artifact@v4
+      - name: Setup JDK for Java 21
+        uses: actions/setup-java@v3
         with:
-          name: version
-          path: version.txt
+          java-version: '21'
+          distribution: 'temurin'
 
-      - name: Build GarlicBreeder Plugin (1.20.4)
+      - name: Build Plugin for 2b (1.21.4)
         run: ./gradlew build
 
-      - name: Rename artifact if needed
-        run: |
-          VERSION=$(cat version.txt)
-          JAR_FILE=$(ls build/libs/GarlicBreeder-*.jar | head -n 1)
-          if [[ -z "$JAR_FILE" ]]; then
-            echo "Error: No JAR file found!"
-            exit 1
-          fi
-          EXPECTED_NAME="build/libs/GarlicBreeder-${VERSION}.jar"
-          if [[ "$JAR_FILE" != "$EXPECTED_NAME" ]]; then
-            mv "$JAR_FILE" "$EXPECTED_NAME"
-          fi
-          echo "Renamed $JAR_FILE to $EXPECTED_NAME"
+      - name: Rename and Upload artifact for 2b branch (1.21.4)
+        run: mv build/libs/GarlicBreeder-*.jar build/libs/GarlicBreeder-1.21.4.jar
 
-      - name: Upload JAR artifact
+      - name: Upload artifact for 2b
         uses: actions/upload-artifact@v4
         with:
-          name: GarlicBreeder
-          path: build/libs/GarlicBreeder-*.jar
+          name: GarlicBreeder-2b
+          path: build/libs/GarlicBreeder-1.21.4.jar
 
   release:
-    needs: build
+    needs: [build-master, build-2b]
     runs-on: ubuntu-24.04
 
     permissions:
       contents: write
 
     steps:
-      - name: Check out the repository
+      - name: Checkout the repo
         uses: actions/checkout@v4
 
-      - name: Download version file
+      - name: Download master artifact
         uses: actions/download-artifact@v4
         with:
-          name: version
+          name: GarlicBreeder-master
+          path: GarlicBreeder-master
 
-      - name: Read version
+      - name: Download 2b artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: GarlicBreeder-2b
+          path: GarlicBreeder-2b
+
+      - name: Get and increment tag
+        id: get_tag
         run: |
-          echo "NEW_VERSION=$(cat version.txt)" >> $GITHUB_ENV
-        shell: bash
+          git fetch --tags --force
+          latest_tag=$(git describe --tags $(git rev-list --tags --max-count=1) || echo "v0.0.0")
+          version=${latest_tag#v}
+          IFS='.' read -r major minor patch <<< "$version"
+          new_patch=$((patch + 1))
+          new_tag="v$major.$minor.$new_patch"
+          echo "NEW_TAG=$new_tag" >> $GITHUB_ENV
 
-      - name: Download built artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: GarlicBreeder
-          path: GarlicBreeder
+      - name: Push new tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git fetch --unshallow --tags
+          git tag ${{ env.NEW_TAG }}
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ${{ env.NEW_TAG }}
 
       - name: Create GitHub Release
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "v${{ env.NEW_VERSION }}"
+          automatic_release_tag: "${{ env.NEW_TAG }}"
           prerelease: false
           files: |
-            GarlicBreeder/GarlicBreeder-${{ env.NEW_VERSION }}.jar
+            GarlicBreeder-master/GarlicBreeder-1.20.4.jar
+            GarlicBreeder-2b/GarlicBreeder-1.21.4.jar
