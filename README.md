@@ -39,14 +39,21 @@
 
 ### **Available Settings**
 
+#### AutoBreed Module
+
+| Setting              | Description                                              |
+| -------------------- | -------------------------------------------------------- |
+| **Breed Radius**     | The maximum range to search for animals to breed         |
+| **Prioritize Pairs** | Ensures pairs are bred optimally                         |
+| **Follow Mode**      | Makes animals follow you without breeding                |
+| **Feed Babies**      | Feeds baby animals continuously to speed up their growth |
+| **Tame Wolves**      | Automatically tame wolves                                |
+| **Tame Cats**        | Automatically tame cats                                  |
+
+#### AutoBreeder HUD Element
+
 | Setting                    | Description                                              |
 | -------------------------- | -------------------------------------------------------- |
-| **Breed Radius**           | The maximum range to search for animals to breed         |
-| **Prioritize Pairs**       | Ensures pairs are bred optimally                         |
-| **Follow Mode**            | Makes animals follow you without breeding                |
-| **Feed Babies**            | Feeds baby animals continuously to speed up their growth |
-| **Tame Wolves**            | Automatically tame wolves                                |
-| **Tame Cats**              | Automatically tame cats                                  |
 | **Show Cooldown Timer**    | Toggle displaying the cooldown for breeding animals      |
 | **Cooldown Format**        | Display time in **seconds**, **minutes**, or **both**    |
 | **Show Animal Name**       | Toggle animal name in the cooldown display               |
