@@ -6,4 +6,6 @@ The following versions of GarlicBreeder are currently being supported with secur
 
 | Version | Supported         |
 | ------- | ------------------ |
-| v1.0.0  | :white_check_mark: |
+| v1.0.2  | :white_check_mark: |
+| v1.0.1  | :x:                |
+| v1.0.0  | :x:                |
