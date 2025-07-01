@@ -74,10 +74,10 @@ public class AutoBreedModule extends ToggleableModule {
 
     // Flowers for Bees
     private static final List<Item> BEE_FLOWERS = Arrays.asList(
-        Items.DANDELION, Items.POPPY, Items.BLUE_ORCHID, Items.ALLIUM, Items.AZURE_BLUET,
-        Items.RED_TULIP, Items.ORANGE_TULIP, Items.WHITE_TULIP, Items.PINK_TULIP,
-        Items.OXEYE_DAISY, Items.CORNFLOWER, Items.LILY_OF_THE_VALLEY, Items.WITHER_ROSE,
-        Items.SUNFLOWER, Items.LILAC, Items.ROSE_BUSH, Items.PEONY, Items.TORCHFLOWER
+            Items.DANDELION, Items.POPPY, Items.BLUE_ORCHID, Items.ALLIUM, Items.AZURE_BLUET,
+            Items.RED_TULIP, Items.ORANGE_TULIP, Items.WHITE_TULIP, Items.PINK_TULIP,
+            Items.OXEYE_DAISY, Items.CORNFLOWER, Items.LILY_OF_THE_VALLEY, Items.WITHER_ROSE,
+            Items.SUNFLOWER, Items.LILAC, Items.ROSE_BUSH, Items.PEONY, Items.TORCHFLOWER
     );
 
     private static final Map<Class<? extends Animal>, List<Item>> BREEDING_ITEMS = new HashMap<>();
@@ -86,12 +86,12 @@ public class AutoBreedModule extends ToggleableModule {
         BREEDING_ITEMS.put(Sheep.class,     Collections.singletonList(Items.WHEAT));
         BREEDING_ITEMS.put(Pig.class,       Arrays.asList(Items.CARROT, Items.POTATO, Items.BEETROOT));
         BREEDING_ITEMS.put(Chicken.class,   Arrays.asList(Items.WHEAT_SEEDS, Items.BEETROOT_SEEDS,
-                                                          Items.PUMPKIN_SEEDS, Items.MELON_SEEDS));
+                Items.PUMPKIN_SEEDS, Items.MELON_SEEDS));
 
         BREEDING_ITEMS.put(Wolf.class, Arrays.asList(
-            Items.BEEF, Items.CHICKEN, Items.PORKCHOP, Items.MUTTON, Items.RABBIT,
-            Items.ROTTEN_FLESH, Items.COOKED_BEEF, Items.COOKED_CHICKEN,
-            Items.COOKED_PORKCHOP, Items.COOKED_MUTTON, Items.COOKED_RABBIT
+                Items.BEEF, Items.CHICKEN, Items.PORKCHOP, Items.MUTTON, Items.RABBIT,
+                Items.ROTTEN_FLESH, Items.COOKED_BEEF, Items.COOKED_CHICKEN,
+                Items.COOKED_PORKCHOP, Items.COOKED_MUTTON, Items.COOKED_RABBIT
         ));
 
         BREEDING_ITEMS.put(Cat.class, Arrays.asList(Items.COD, Items.SALMON));
@@ -125,11 +125,11 @@ public class AutoBreedModule extends ToggleableModule {
 
         BooleanSetting mobSettings = new BooleanSetting("Mobs", true);
         mobSettings.addSubSettings(
-            feedBabies,
-            breedCows, breedSheep, breedPigs, breedChickens, breedWolves,
-            breedCats, breedFoxes, breedPandas, breedTurtles, breedBees,
-            breedFrogs, breedGoats, breedHoglins, breedStriders,
-            breedMooshrooms, breedRabbits, breedSniffers, breedCamels, breedAxolotls
+                feedBabies,
+                breedCows, breedSheep, breedPigs, breedChickens, breedWolves,
+                breedCats, breedFoxes, breedPandas, breedTurtles, breedBees,
+                breedFrogs, breedGoats, breedHoglins, breedStriders,
+                breedMooshrooms, breedRabbits, breedSniffers, breedCamels, breedAxolotls
         );
 
         BooleanSetting tamingSettings = new BooleanSetting("Taming", true);
@@ -159,8 +159,8 @@ public class AutoBreedModule extends ToggleableModule {
         if (mc.player == null || mc.level == null) return;
 
         List<Animal> allAnimals = mc.level.getEntitiesOfClass(
-            Animal.class,
-            mc.player.getBoundingBox().inflate(breedRadius.getValue())
+                Animal.class,
+                mc.player.getBoundingBox().inflate(breedRadius.getValue())
         );
         if (allAnimals.isEmpty()) {
             revertSlot();
@@ -254,27 +254,31 @@ public class AutoBreedModule extends ToggleableModule {
         // Attempt multiple feeds
         List<Item> items = TAME_ITEMS.get(animal.getClass());
         if (items != null) {
-            feedMobMultipleTimes(animal, items, 5);
+            feedMobMultipleTimes(animal, items);
         }
         interactionTimestamps.put(id, System.currentTimeMillis());
     }
 
-    private void feedMobMultipleTimes(Animal animal, List<Item> possibleFoods, int maxFeeds) {
+    private void feedMobMultipleTimes(Animal animal, List<Item> possibleFoods) {
         int feedsDone = 0;
         for (Item item : possibleFoods) {
-            while (feedsDone < maxFeeds) {
+            while (feedsDone < 5) {
                 int slot = InventoryUtils.findItem(item, true, false);
                 if (slot < 0) break;
                 switchToItem(slot);
 
-                mc.player.connection.send(
-                    ServerboundInteractPacket.createInteractionPacket(animal, false, InteractionHand.MAIN_HAND)
-                );
+                if (mc.player != null) {
+                    mc.player.connection.send(
+                            ServerboundInteractPacket.createInteractionPacket(animal, false, InteractionHand.MAIN_HAND)
+                    );
+                }
                 // Arm swing
-                mc.player.swing(InteractionHand.MAIN_HAND);
+                if (mc.player != null) {
+                    mc.player.swing(InteractionHand.MAIN_HAND);
+                }
                 feedsDone++;
             }
-            if (feedsDone >= maxFeeds) break;
+            if (feedsDone >= 5) break;
         }
     }
 
@@ -341,18 +345,22 @@ public class AutoBreedModule extends ToggleableModule {
             if (slot >= 0) {
                 switchToItem(slot);
 
-                // Send packet to interact with the animal (feed it)
-                mc.player.connection.send(
-                    ServerboundInteractPacket.createInteractionPacket(animal, false, InteractionHand.MAIN_HAND)
-                );
-                // Swing the arm so the server sees a "use" animation
-                mc.player.swing(InteractionHand.MAIN_HAND);
+                try {
+                    if (mc.player != null) {
+                        mc.player.connection.send(
+                                ServerboundInteractPacket.createInteractionPacket(animal, false, InteractionHand.MAIN_HAND)
+                        );
+                        mc.player.swing(InteractionHand.MAIN_HAND);
+                    }
+                } catch (Exception e) {
+                    ChatUtils.print("Error feeding " + animal.getClass().getSimpleName() + ": " + e.getMessage());
+                    return false;
+                }
 
-                // Special case for Axolotls: If we end up holding an Axolotl in a bucket, release it
                 if (animal instanceof Axolotl) {
                     handleAxolotlRelease();
                 }
-                
+
                 return true;
             }
         }
@@ -368,8 +376,12 @@ public class AutoBreedModule extends ToggleableModule {
             switchToItem(bucketSlot);
 
             // Use the bucket (right-click to release Axolotl)
-            mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
-            mc.player.swing(InteractionHand.MAIN_HAND);
+            if (mc.gameMode != null) {
+                mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+            }
+            if (mc.player != null) {
+                mc.player.swing(InteractionHand.MAIN_HAND);
+            }
 
             // Wait a tick for the item to update in inventory
             mc.execute(() -> {
@@ -392,9 +404,7 @@ public class AutoBreedModule extends ToggleableModule {
     private boolean checkCooldown(Animal animal) {
         if (!animal.isBaby()) {
             Long last = interactionTimestamps.get(animal.getUUID());
-            if (last != null && (System.currentTimeMillis() - last) < 1000) {
-                return false;
-            }
+            return last == null || (System.currentTimeMillis() - last) >= 1000;
         }
         return true;
     }
@@ -462,20 +472,28 @@ public class AutoBreedModule extends ToggleableModule {
     // ========== SLOT SWITCHING ==========
     private void switchToItem(int slot) {
         if (veryOriginalSlot == -1) {
-            veryOriginalSlot = mc.player.getInventory().selected;
+            if (mc.player != null) {
+                veryOriginalSlot = mc.player.getInventory().selected;
+            }
         }
         if (previousHotbarSlot == -1) {
-            previousHotbarSlot = mc.player.getInventory().selected;
+            if (mc.player != null) {
+                previousHotbarSlot = mc.player.getInventory().selected;
+            }
         }
 
         if (slot < 9) {
             // switch directly if it’s hotbar
-            mc.player.connection.send(new ServerboundSetCarriedItemPacket(slot));
+            if (mc.player != null) {
+                mc.player.connection.send(new ServerboundSetCarriedItemPacket(slot));
+            }
         } else if (slot <= 35) {
             // from main inventory to hotbar
             if (previousHotbarSlot != -1) {
                 InventoryUtils.swapSlots(slot, previousHotbarSlot);
-                mc.player.connection.send(new ServerboundSetCarriedItemPacket(previousHotbarSlot));
+                if (mc.player != null) {
+                    mc.player.connection.send(new ServerboundSetCarriedItemPacket(previousHotbarSlot));
+                }
                 swappedInventorySlot = slot;
             }
         }
@@ -495,8 +513,12 @@ public class AutoBreedModule extends ToggleableModule {
         }
 
         if (veryOriginalSlot >= 0 && veryOriginalSlot <= 8) {
-            mc.player.connection.send(new ServerboundSetCarriedItemPacket(veryOriginalSlot));
-            mc.player.getInventory().selected = veryOriginalSlot;
+            if (mc.player != null) {
+                mc.player.connection.send(new ServerboundSetCarriedItemPacket(veryOriginalSlot));
+            }
+            if (mc.player != null) {
+                mc.player.getInventory().selected = veryOriginalSlot;
+            }
         }
 
         hasSwitchedItem = false;

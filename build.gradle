@@ -57,13 +57,13 @@ dependencies {
 tasks.register('updateAccessWidener', Copy) {
 	group = "build"
 	outputs.upToDateWhen { false }
-	
+
 	def accessWidenerFile = zipTree(this.project.configurations.rusherhackApi.singleFile).matching {
 		include "rusherhack.accesswidener"
 	}.files.iterator().next()
-	
+
 	println("rusherhack access widener: " + accessWidenerFile)
-	
+
 	from(accessWidenerFile)
 	into(file("build/tmp/" + this.project.minecraft_version))
 }
