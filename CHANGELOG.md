@@ -6,6 +6,52 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ---
 
+## [1.0.5] - 2025-06-30  
+[1.0.5]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.5  
+
+### Allay Duplication Support  
+- 🧚 Added support for duplicating **Allays** using Amethyst Shards while dancing near a Jukebox.  
+- Introduced internal **cooldown tracking** for Allay duplication (2.5 minutes).  
+- Ensured shard is forcefully moved to the correct slot for interaction.  
+- Prevented unnecessary arm swinging during interaction.  
+- Added new HUD setting: **Show Allay Cooldown**.  
+- Updated HUD element to show Allay cooldowns and duplication readiness.  
+- Cleaned up spammy chat messages related to failed interactions.  
+
+> ℹ️ **Note**: The Jukebox must be playing music for the Allay to be eligible for duplication.
+
+---
+
+## [1.0.4] - 2025-06-29  
+[1.0.4]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.4  
+
+### Bug Fix – Turtle Crash  
+- Fixed crash when feeding baby **Turtles** with "Feed Babies" enabled.  
+- Added proper checks to avoid feeding items to entities that don't grow the same way as other animals.  
+
+---
+
+## [1.0.3] - 2025-06-24  
+[1.0.3]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.3  
+
+### Improved Feedback and Arm Swing Behavior  
+- Improved visual feedback messages when attempting to breed mobs.  
+- Prevented unnecessary **arm swings** when interaction packets are sent, to avoid visual clutter.  
+- Added message when mobs are not breedable due to missing partner or cooldown.  
+
+---
+
+## [1.0.2] - 2025-06-21  
+[1.0.2]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.2  
+
+### UX and Code Enhancements  
+- Optimized cooldown tracking logic internally.  
+- Refactored how cooldown timestamps are stored and accessed.  
+- Updated HUD rendering to better handle entities with no active cooldown.  
+- Improved support for HUD message toggles and formatting options.
+
+---
+
 ## [1.0.1] - 2025-06-12  
 [1.0.1]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.1  
 
