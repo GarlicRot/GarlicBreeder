@@ -12,25 +12,30 @@
   <img src="https://img.shields.io/badge/%F0%9F%A7%84-Approved%20%E2%9C%94%EF%B8%8F-blue?style=flat" alt="🧄 Approved ✔️">
 </p>
 
-## ** Features**
+## **Features**
 
 ### **AutoBreed Module**
 
 - **Automatic Animal Breeding** – Detects and breeds nearby animals automatically.
-- **Supports Multiple Mobs** – Works with cows, sheep, pigs, chickens, foxes, pandas, turtles, bees, frogs, goats, hoglins, striders, mooshrooms, rabbits, sniffers and camels.
+- **Supports Multiple Mobs** – Works with cows, sheep, pigs, chickens, foxes, pandas, turtles, bees, frogs, goats, hoglins, striders, mooshrooms, rabbits, sniffers, camels, and now **Allays** (for duplication).
+- **Allay Duplication Support** – Automatically gives dancing Allays Amethyst Shards to duplicate them when near a jukebox.
 - **Breeding Pair Prioritization** – Ensures pairs are bred optimally.
 - **Follow Mode** – Makes animals follow you without breeding.
 - **Baby Feeding Mode** – Instantly grows baby animals by continuously feeding them.
 - **Taming Support** – Automatically tames wolves and cats.
 
+> [!IMPORTANT]
+> To duplicate Allays, a jukebox must be playing music nearby while the Allay is dancing.
+
 ### **Breeding Cooldown HUD**
 
-- **Live Cooldown Display** – Shows how much time remains before an animal can breed again.
+- **Live Cooldown Display** – Shows how much time remains before an animal can breed again or when an Allay is ready to duplicate.
+- **Allay Cooldown Support** – Displays duplication cooldown for dancing Allays using a unique timer and message styling.
 - **Customizable Display Options** – Choose whether to display the animal's name, cooldown format, and no-cooldown messages.
 - **Time Format Selection** – Convert the cooldown display between **seconds**, **minutes**, or **both**.
 - **Lightweight & Optimized** – Works seamlessly with RusherHacks without impacting performance.
 
-## ** Module & HUD Settings**
+## **Module & HUD Settings**
 
 <p align="center">
     <img src="assets/ModuleSettings.png" alt="AutoBreeder Module Settings" width="200">
@@ -59,27 +64,27 @@
 | **Show Animal Name**       | Toggle animal name in the cooldown display               |
 | **Show No Cooldown Msg**   | Display a message when an animal is **ready to breed**   |
 | **Show Not Targeting Msg** | Show a message when you're not aiming at a breedable mob |
+| **Show Allay Cooldown**    | Display duplication cooldown when targeting a dancing Allay |
 
-## ** Installation**
+## **Installation**
 
 1. Download the latest release from the **[Releases](https://github.com/GarlicRot/GarlicBreeder/releases)** page.
 2. Place the `.jar` file in your `rusherhacks/plugins` folder.
 3. Launch Minecraft with **RusherHacks** installed.
-4. Enable the **AutoBreed Module** and/or **AutoBreeder HUD Element**
+4. Enable the **AutoBreed Module** and/or **AutoBreeder HUD Element**.
 
-## Changelog
+## **Changelog**
 
 Stay updated with all changes and improvements by checking the [CHANGELOG.md](CHANGELOG.md) file. Each release documents the added features, bug fixes, and other updates to the plugin.
 
-## Reporting Issues
+## **Reporting Issues**
 
 If you encounter bugs or have feature requests, please use the appropriate [issue templates](https://github.com/GarlicRot/GarlicBreeder/issues/new/choose) provided in the repository:
 
 - [Bug Report](https://github.com/GarlicRot/GarlicBreeder/issues/new?template=bug_report.md)  
-- [Feature Request](https://github.com/GarlicRot/GarlicBreeder/issues/new?template=feature_request.md)
+- [Feature Request](https://github.com/GarlicRot/GarlicBreeder/issues/new?template=feature_request.md)  
+- [Custom Issue](https://github.com/GarlicRot/GarlicBreeder/issues/new?template=custom_issue.md)
 
-For custom issues or general inquiries, use the [Custom Issue](https://github.com/GarlicRot/GarlicBreeder/issues/new?template=custom_issue.md) template.
-
-## ** Contributing**
+## **Contributing**
 
 Contributions are welcome! Please check out the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to contribute to this project.
