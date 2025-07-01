@@ -1,7 +1,9 @@
 package org.rusherhack.autobreed.hud;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.allay.Allay;
 import org.rusherhack.client.api.feature.hud.HudElement;
 import org.rusherhack.client.api.render.RenderContext;
 import org.rusherhack.client.api.render.font.IFontRenderer;
@@ -13,39 +15,30 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * HUD element for showing the breeding cooldown of the targeted animal.
+ * HUD element for showing the breeding cooldown of the targeted animal or Allay.
  */
 public class AutoBreederHudElement extends HudElement {
 
     private final Minecraft mc = Minecraft.getInstance();
     private final AutoBreedModule breedModule;
 
-    // Fixed breeding cooldown (5 minutes)
+    // Fixed breeding cooldown (5 minutes for animals, 2.5 minutes for Allay)
     private static final long BREED_COOLDOWN_MS = 5 * 60 * 1000L;
+    private static final long ALLAY_COOLDOWN_MS = 150_000L;
 
-    // Enum for cooldown display format
     private enum TimeFormat { SECONDS, MINUTES, BOTH }
     private final EnumSetting<TimeFormat> timeFormatSetting = new EnumSetting<>("Cooldown Format", TimeFormat.SECONDS);
 
-    // Settings for message display
     private final BooleanSetting showAnimalName = new BooleanSetting("Show Animal Name", true);
     private final BooleanSetting showNoCooldownMessage = new BooleanSetting("Show No Cooldown Message", true);
     private final BooleanSetting showNotTargetingMessage = new BooleanSetting("Show Not Targeting Message", true);
+    private final BooleanSetting showAllayCooldown = new BooleanSetting("Show Allay Cooldown", true);
 
-    /**
-     * Constructor for the AutoBreederHudElement.
-     *
-     * @param moduleRef Reference to the AutoBreedModule.
-     */
     public AutoBreederHudElement(AutoBreedModule moduleRef) {
         super("AutoBreederHudElement");
         this.breedModule = moduleRef;
-
-        // Set the description for the HUD element
-        this.setDescription("Displays the breeding cooldown for targeted animals.");
-
-        // Register settings
-        this.registerSettings(timeFormatSetting, showAnimalName, showNoCooldownMessage, showNotTargetingMessage);
+        this.setDescription("Displays the breeding cooldown for targeted animals or Allays.");
+        this.registerSettings(timeFormatSetting, showAnimalName, showNoCooldownMessage, showNotTargetingMessage, showAllayCooldown);
     }
 
     @Override
@@ -53,51 +46,67 @@ public class AutoBreederHudElement extends HudElement {
         IFontRenderer font = this.getFontRenderer();
         font.begin();
 
-        if (mc.crosshairPickEntity instanceof Animal target) {
-            Map<UUID, Long> timestamps = breedModule.getInteractionTimestamps();
-            if (timestamps != null) {
-                Long lastFed = timestamps.get(target.getUUID());
-                if (lastFed != null) {
-                    long elapsed = System.currentTimeMillis() - lastFed;
-                    long timeLeft = BREED_COOLDOWN_MS - elapsed;
+        Entity target = mc.crosshairPickEntity;
 
-                    if (timeLeft > 0) {
-                        String timeText = formatCooldown(timeLeft);
-                        String name = target.getName().getString();
-                        String text = showAnimalName.getValue()
-                                ? String.format("%s: %s", name, timeText)
-                                : timeText;
+        if (target instanceof Allay allay && allay.isDancing() && showAllayCooldown.getValue()) {
+            Map<UUID, Long> cooldowns = breedModule.getAllayCooldowns();
+            Long lastDuped = cooldowns.get(allay.getUUID());
 
-                        font.drawString(text, 0.0F, 0.0F, 0xFFFFFF, false);
-                        font.end();
-                        return;
-                    }
+            if (lastDuped != null) {
+                long elapsed = System.currentTimeMillis() - lastDuped;
+                long timeLeft = ALLAY_COOLDOWN_MS - elapsed;
+
+                if (timeLeft > 0) {
+                    String timeText = formatCooldown(timeLeft);
+                    String name = allay.getName().getString();
+                    String text = showAnimalName.getValue()
+                            ? String.format("%s: %s", name, timeText)
+                            : timeText;
+
+                    font.drawString(text, 0.0F, 0.0F, 0x55FFFF, false);
+                    font.end();
+                    return;
                 }
             }
 
-            // If no cooldown is active
+            if (showNoCooldownMessage.getValue()) {
+                font.drawString("Allay is ready to duplicate", 0.0F, 0.0F, 0x55FF55, false);
+            }
+
+        } else if (target instanceof Animal animal) {
+            Map<UUID, Long> timestamps = breedModule.getInteractionTimestamps();
+            Long lastFed = timestamps.get(animal.getUUID());
+
+            if (lastFed != null) {
+                long elapsed = System.currentTimeMillis() - lastFed;
+                long timeLeft = BREED_COOLDOWN_MS - elapsed;
+
+                if (timeLeft > 0) {
+                    String timeText = formatCooldown(timeLeft);
+                    String name = animal.getName().getString();
+                    String text = showAnimalName.getValue()
+                            ? String.format("%s: %s", name, timeText)
+                            : timeText;
+
+                    font.drawString(text, 0.0F, 0.0F, 0xFFFFFF, false);
+                    font.end();
+                    return;
+                }
+            }
+
             if (showNoCooldownMessage.getValue()) {
                 String noCooldownText = showAnimalName.getValue()
-                        ? "No cooldown for " + target.getName().getString()
+                        ? "No cooldown for " + animal.getName().getString()
                         : "No active cooldown";
                 font.drawString(noCooldownText, 0.0F, 0.0F, 0xAAAAAA, false);
             }
-        } else {
-            // Not targeting an animal
-            if (showNotTargetingMessage.getValue()) {
-                font.drawString("Not targeting a breedable mob", 0.0F, 0.0F, 0xAAAAAA, false);
-            }
-        }
 
+        } else if (showNotTargetingMessage.getValue()) {
+            font.drawString("Not targeting a breedable mob", 0.0F, 0.0F, 0xAAAAAA, false);
+        }
         font.end();
     }
 
-    /**
-     * Converts cooldown time into selected format (Seconds, Minutes, or Both).
-     *
-     * @param timeLeft Time left in milliseconds
-     * @return Formatted string based on selected format
-     */
     private String formatCooldown(long timeLeft) {
         TimeFormat format = timeFormatSetting.getValue();
         long seconds = timeLeft / 1000;
@@ -113,8 +122,7 @@ public class AutoBreederHudElement extends HudElement {
 
     @Override
     public double getWidth() {
-        IFontRenderer font = this.getFontRenderer();
-        return font.getStringWidth("No cooldown for a breedable mob");
+        return this.getFontRenderer().getStringWidth("Allay is ready to duplicate");
     }
 
     @Override

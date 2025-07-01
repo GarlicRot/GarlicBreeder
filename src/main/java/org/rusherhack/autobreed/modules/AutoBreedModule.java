@@ -4,8 +4,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.animal.*;
+import net.minecraft.world.entity.animal.allay.Allay;
 import net.minecraft.world.entity.animal.axolotl.Axolotl;
 import net.minecraft.world.entity.animal.camel.Camel;
 import net.minecraft.world.entity.animal.frog.Frog;
@@ -32,13 +34,19 @@ import java.util.*;
 public class AutoBreedModule extends ToggleableModule {
     private final Minecraft mc = Minecraft.getInstance();
 
+    // General Settings
     private final NumberSetting<Integer> breedRadius = new NumberSetting<>("Breed Radius", 5, 1, 10);
     private final BooleanSetting prioritizePairs = new BooleanSetting("Prioritize Pairs", true);
     private final BooleanSetting followMode = new BooleanSetting("Follow Mode", false);
 
+    // Allay Settings
+    private final NumberSetting<Integer> shardCountRequired = new NumberSetting<>("Min Shard Count", 1, 1, 16);
+
+
     // If true, we feed baby animals as well (instantly, repeatedly)
     private final BooleanSetting feedBabies = new BooleanSetting("Feed Babies", false);
 
+    // Mob Settings
     private final BooleanSetting breedCows       = new BooleanSetting("Cows", true);
     private final BooleanSetting breedSheep      = new BooleanSetting("Sheep", true);
     private final BooleanSetting breedPigs       = new BooleanSetting("Pigs", true);
@@ -74,11 +82,13 @@ public class AutoBreedModule extends ToggleableModule {
 
     // Flowers for Bees
     private static final List<Item> BEE_FLOWERS = Arrays.asList(
-        Items.DANDELION, Items.POPPY, Items.BLUE_ORCHID, Items.ALLIUM, Items.AZURE_BLUET,
-        Items.RED_TULIP, Items.ORANGE_TULIP, Items.WHITE_TULIP, Items.PINK_TULIP,
-        Items.OXEYE_DAISY, Items.CORNFLOWER, Items.LILY_OF_THE_VALLEY, Items.WITHER_ROSE,
-        Items.SUNFLOWER, Items.LILAC, Items.ROSE_BUSH, Items.PEONY, Items.TORCHFLOWER
+            Items.DANDELION, Items.POPPY, Items.BLUE_ORCHID, Items.ALLIUM, Items.AZURE_BLUET,
+            Items.RED_TULIP, Items.ORANGE_TULIP, Items.WHITE_TULIP, Items.PINK_TULIP,
+            Items.OXEYE_DAISY, Items.CORNFLOWER, Items.LILY_OF_THE_VALLEY, Items.WITHER_ROSE,
+            Items.SUNFLOWER, Items.LILAC, Items.ROSE_BUSH, Items.PEONY, Items.TORCHFLOWER
     );
+
+    private final BooleanSetting breedAllays = new BooleanSetting("Allays", true);
 
     private static final Map<Class<? extends Animal>, List<Item>> BREEDING_ITEMS = new HashMap<>();
     static {
@@ -86,12 +96,12 @@ public class AutoBreedModule extends ToggleableModule {
         BREEDING_ITEMS.put(Sheep.class,     Collections.singletonList(Items.WHEAT));
         BREEDING_ITEMS.put(Pig.class,       Arrays.asList(Items.CARROT, Items.POTATO, Items.BEETROOT));
         BREEDING_ITEMS.put(Chicken.class,   Arrays.asList(Items.WHEAT_SEEDS, Items.BEETROOT_SEEDS,
-                                                          Items.PUMPKIN_SEEDS, Items.MELON_SEEDS));
+                Items.PUMPKIN_SEEDS, Items.MELON_SEEDS));
 
         BREEDING_ITEMS.put(Wolf.class, Arrays.asList(
-            Items.BEEF, Items.CHICKEN, Items.PORKCHOP, Items.MUTTON, Items.RABBIT,
-            Items.ROTTEN_FLESH, Items.COOKED_BEEF, Items.COOKED_CHICKEN,
-            Items.COOKED_PORKCHOP, Items.COOKED_MUTTON, Items.COOKED_RABBIT
+                Items.BEEF, Items.CHICKEN, Items.PORKCHOP, Items.MUTTON, Items.RABBIT,
+                Items.ROTTEN_FLESH, Items.COOKED_BEEF, Items.COOKED_CHICKEN,
+                Items.COOKED_PORKCHOP, Items.COOKED_MUTTON, Items.COOKED_RABBIT
         ));
 
         BREEDING_ITEMS.put(Cat.class, Arrays.asList(Items.COD, Items.SALMON));
@@ -108,6 +118,7 @@ public class AutoBreedModule extends ToggleableModule {
         BREEDING_ITEMS.put(Sniffer.class, Collections.singletonList(Items.TORCHFLOWER_SEEDS));
         BREEDING_ITEMS.put(Camel.class, Collections.singletonList(Items.CACTUS));
         BREEDING_ITEMS.put(Axolotl.class, Collections.singletonList(Items.TROPICAL_FISH_BUCKET));
+
     }
 
     // For taming
@@ -123,20 +134,27 @@ public class AutoBreedModule extends ToggleableModule {
         BooleanSetting generalSettings = new BooleanSetting("General Settings", true);
         generalSettings.addSubSettings(breedRadius, prioritizePairs, followMode);
 
+        BooleanSetting allaySettings = new BooleanSetting("Allay Settings", true);
+        allaySettings.addSubSettings(
+                breedAllays,
+                shardCountRequired
+        );
+
         BooleanSetting mobSettings = new BooleanSetting("Mobs", true);
         mobSettings.addSubSettings(
-            feedBabies,
-            breedCows, breedSheep, breedPigs, breedChickens, breedWolves,
-            breedCats, breedFoxes, breedPandas, breedTurtles, breedBees,
-            breedFrogs, breedGoats, breedHoglins, breedStriders,
-            breedMooshrooms, breedRabbits, breedSniffers, breedCamels, breedAxolotls
+                feedBabies,
+                breedCows, breedSheep, breedPigs, breedChickens, breedWolves,
+                breedCats, breedFoxes, breedPandas, breedTurtles, breedBees,
+                breedFrogs, breedGoats, breedHoglins, breedStriders,
+                breedMooshrooms, breedRabbits, breedSniffers, breedCamels, breedAxolotls
         );
 
         BooleanSetting tamingSettings = new BooleanSetting("Taming", true);
         tamingSettings.addSubSettings(autoTameWolves, autoTameCats);
 
-        this.registerSettings(generalSettings, mobSettings, tamingSettings);
+        this.registerSettings(generalSettings, allaySettings, mobSettings, tamingSettings);
     }
+
 
     @Override
     public void onEnable() {
@@ -158,10 +176,22 @@ public class AutoBreedModule extends ToggleableModule {
     public void onUpdate(EventUpdate event) {
         if (mc.player == null || mc.level == null) return;
 
-        List<Animal> allAnimals = mc.level.getEntitiesOfClass(
-            Animal.class,
-            mc.player.getBoundingBox().inflate(breedRadius.getValue())
+        List<Entity> nearbyEntities = mc.level.getEntities(
+                mc.player,
+                mc.player.getBoundingBox().inflate(breedRadius.getValue()),
+                e -> e instanceof Animal || e instanceof Allay
         );
+
+        List<Animal> allAnimals = new ArrayList<>();
+        for (Entity entity : nearbyEntities) {
+            if (entity instanceof Allay) {
+                if (tryDuplicateAllay(entity)) continue;
+            }
+
+            if (entity instanceof Animal animal) {
+                allAnimals.add(animal);
+            }
+        }
         if (allAnimals.isEmpty()) {
             revertSlot();
             return;
@@ -269,12 +299,8 @@ public class AutoBreedModule extends ToggleableModule {
 
                 if (mc.player != null) {
                     mc.player.connection.send(
-                        ServerboundInteractPacket.createInteractionPacket(animal, false, InteractionHand.MAIN_HAND)
+                            ServerboundInteractPacket.createInteractionPacket(animal, false, InteractionHand.MAIN_HAND)
                     );
-                }
-                // Arm swing
-                if (mc.player != null) {
-                    mc.player.swing(InteractionHand.MAIN_HAND);
                 }
                 feedsDone++;
             }
@@ -332,9 +358,19 @@ public class AutoBreedModule extends ToggleableModule {
     /**
      * Attempt feeding once with the first matching breeding item found.
      * If feeding an Axolotl, ensure it's released after being picked up.
+     * If feeding an Allay, track giving and receiving of the shard.
      * Returns true if the animal was successfully fed.
      */
     private boolean tryFeedAnimal(Animal animal) {
+        // Skip turtle if it has no home position (prevents crash)
+        if (animal instanceof Turtle) {
+            try {
+                animal.getClass().getDeclaredMethod("getHomePos"); // Just check method exists
+            } catch (Exception ignored) {
+                return false;
+            }
+        }
+
         List<Item> items = BREEDING_ITEMS.get(animal.getClass());
         if (items == null || items.isEmpty()) {
             return false;
@@ -346,11 +382,18 @@ public class AutoBreedModule extends ToggleableModule {
                 switchToItem(slot);
 
                 try {
+                    if (animal.getType().toString().contains("allay")) {
+                        return false;
+                    }
+
                     if (mc.player != null) {
                         mc.player.connection.send(
                                 ServerboundInteractPacket.createInteractionPacket(animal, false, InteractionHand.MAIN_HAND)
                         );
-                        mc.player.swing(InteractionHand.MAIN_HAND);
+
+                        if (!animal.getType().toString().contains("allay")) {
+                            mc.player.swing(InteractionHand.MAIN_HAND);
+                        }
                     }
                 } catch (Exception e) {
                     ChatUtils.print("Error feeding " + animal.getClass().getSimpleName() + ": " + e.getMessage());
@@ -364,8 +407,53 @@ public class AutoBreedModule extends ToggleableModule {
                 return true;
             }
         }
+
         return false;
     }
+
+    private static final long ALLAY_COOLDOWN_MS = 150_000L;
+    private final Map<UUID, Long> allayDuplicationCooldowns = new HashMap<>();
+
+    private boolean tryDuplicateAllay(Entity entity) {
+        if (!(entity instanceof Allay allay)) return false;
+        if (!allay.isDancing()) return false;
+        if (!breedAllays.getValue()) return false;
+
+        long now = System.currentTimeMillis();
+        Long last = allayDuplicationCooldowns.get(allay.getUUID());
+        if (last != null && now - last < ALLAY_COOLDOWN_MS) return false;
+
+        // Need shards
+        if (InventoryUtils.getItemCount(Items.AMETHYST_SHARD, false, true) < shardCountRequired.getValue())
+            return false;
+
+        // Find the shard slot (0–35, excluding crafting slots)
+        int shardSlot = InventoryUtils.findItem(Items.AMETHYST_SHARD, true, false);
+        if (shardSlot < 0) return false;
+
+        // Switch to the amethyst shard using existing slot-switching logic
+        switchToItem(shardSlot);
+
+        // Verify the main hand has the shard
+        if (mc.player == null || !mc.player.getMainHandItem().is(Items.AMETHYST_SHARD)) {
+            revertSlot(); // Revert if the switch failed
+            return false;
+        }
+
+        // Interact with the Allay to give the shard
+        mc.player.connection.send(
+                ServerboundInteractPacket.createInteractionPacket(allay, false, InteractionHand.MAIN_HAND)
+        );
+        mc.player.swing(InteractionHand.MAIN_HAND);
+
+        // Revert to the original item
+        revertSlot();
+
+        // Mark the Allay as duplicated and set cooldown
+        allayDuplicationCooldowns.put(allay.getUUID(), now);
+        return true;
+    }
+
 
     /**
      * Releases an Axolotl from a bucket and puts the empty bucket back into the original slot.
@@ -394,9 +482,6 @@ public class AutoBreedModule extends ToggleableModule {
         }
     }
 
-
-
-
     /**
      * Only applies a 1-second cooldown to adults (since we want babies fed instantly).
      * If they’re not a baby, we do the usual 1s spam check.
@@ -423,7 +508,10 @@ public class AutoBreedModule extends ToggleableModule {
         return isBreedingEnabled(animal);
     }
 
-    private boolean isBreedingEnabled(Animal animal) {
+    private boolean isBreedingEnabled(Entity entity) {
+        if (entity instanceof Allay) return breedAllays.getValue();
+        if (!(entity instanceof Animal animal)) return false;
+
         if (animal instanceof Cow)         return breedCows.getValue();
         if (animal instanceof Sheep)       return breedSheep.getValue();
         if (animal instanceof Pig)         return breedPigs.getValue();
@@ -443,6 +531,7 @@ public class AutoBreedModule extends ToggleableModule {
         if (animal instanceof Sniffer)     return breedSniffers.getValue();
         if (animal instanceof Camel)       return breedCamels.getValue();
         if (animal instanceof Axolotl)     return breedAxolotls.getValue();
+
         return false;
     }
 
@@ -467,6 +556,14 @@ public class AutoBreedModule extends ToggleableModule {
         } else {
             revertSlot();
         }
+    }
+
+    public Map<UUID, Long> getInteractionTimestamps() {
+        return this.interactionTimestamps;
+    }
+
+    public Map<UUID, Long> getAllayCooldowns() {
+        return this.allayDuplicationCooldowns;
     }
 
     // ========== SLOT SWITCHING ==========
@@ -498,10 +595,6 @@ public class AutoBreedModule extends ToggleableModule {
             }
         }
         hasSwitchedItem = true;
-    }
-
-    public Map<UUID, Long> getInteractionTimestamps() {
-        return this.interactionTimestamps;
     }
 
     private void revertSlot() {
