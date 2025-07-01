@@ -4,8 +4,10 @@
 
 The following versions of GarlicBreeder are currently being supported with security updates:
 
-| Version | Supported         |
-| ------- | ------------------ |
-| v1.0.2  | :white_check_mark: |
-| v1.0.1  | :x:                |
-| v1.0.0  | :x:                |
+| Version | Supported |
+| ------- | ---------- |
+| v1.0.5  | ✅         |
+| v1.0.4  | ❌         |
+| v1.0.3  | ❌         |
+| v1.0.2  | ❌         |
+| v1.0.1  | ❌         |
