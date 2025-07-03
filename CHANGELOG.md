@@ -4,7 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
----
+
+## [1.0.6] - 2025-07-03  
+[1.0.6]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.6  
+
+### Improved Maintainability and Robustness  
+- **Refactored Breeding Settings**: Replaced `isBreedingEnabled` switch with a map-based approach for easier maintenance and scalability.  
+- **Optimized Pair Breeding**: Improved `feedAdultsInPairs` to use a separate `processed` list, preventing list modification issues.  
+- **Configuration Validation**: Added warnings for impractical `Breed Radius` (<3) and `Min Shard Count` (>8) settings.  
+- **Centralized Interactions**: Introduced `interactWithEntity` method to streamline entity interaction logic and reduce code duplication.  
+- **Enhanced Slot Management**: Improved `switchToItem` and `revertSlot` with null checks and simplified logic.  
+- **Debug Logging**: Added debug logs for Allay duplication and Axolotl bucket release to aid troubleshooting.  
+- **Bug Fixes**:  
+  - Removed redundant Allay check in `tryFeedAnimal`.  
+  - Eliminated unnecessary Turtle home position check to prevent potential errors.  
 
 ## [1.0.5] - 2025-06-30  
 [1.0.5]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.5  
@@ -20,16 +33,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 > ℹ️ **Note**: The Jukebox must be playing music for the Allay to be eligible for duplication.
 
----
-
 ## [1.0.4] - 2025-06-29  
 [1.0.4]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.4  
 
 ### Bug Fix – Turtle Crash  
 - Fixed crash when feeding baby **Turtles** with "Feed Babies" enabled.  
 - Added proper checks to avoid feeding items to entities that don't grow the same way as other animals.  
-
----
 
 ## [1.0.3] - 2025-06-24  
 [1.0.3]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.3  
@@ -38,8 +47,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Improved visual feedback messages when attempting to breed mobs.  
 - Prevented unnecessary **arm swings** when interaction packets are sent, to avoid visual clutter.  
 - Added message when mobs are not breedable due to missing partner or cooldown.  
-
----
 
 ## [1.0.2] - 2025-06-21  
 [1.0.2]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.2  
@@ -50,8 +57,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Updated HUD rendering to better handle entities with no active cooldown.  
 - Improved support for HUD message toggles and formatting options.
 
----
-
 ## [1.0.1] - 2025-06-12  
 [1.0.1]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.1  
 
@@ -61,8 +66,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - **Java 21**
 - No changes were made to the plugin logic.
 - Artifact: `GarlicBreeder-1.21.4.jar`
-
----
 
 ## [1.0.0] - 2025-02-02  
 [1.0.0]: https://github.com/GarlicRot/GarlicBreeder/releases/tag/v1.0.0  
