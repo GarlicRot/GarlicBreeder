@@ -244,16 +244,12 @@ public class AutoBreedModule extends ToggleableModule {
      * No cooldown. We'll feed the baby up to 20 times in one tick, or until we run out of items.
      */
     private void feedBabyContinuously(Animal baby) {
-        // If user toggled feedBabies, we assume we feed them non-stop
         if (!feedBabies.getValue()) return;
 
-        // Attempt up to 20 feeds.
+        // For other babies: feed repeatedly
         for (int i = 0; i < 20; i++) {
-            if (!tryFeedAnimal(baby)) {
-                break; // no more items
-            }
+            if (!tryFeedAnimal(baby)) break;
         }
-        // We do NOT add them to fedAnimals or record a timestamp => can feed next tick too
     }
 
     // ========= TAMING (Wolves & Cats) =========
@@ -311,29 +307,27 @@ public class AutoBreedModule extends ToggleableModule {
     // ========= BREEDING ADULTS =========
     private void feedAdultsInPairs(List<Animal> adults) {
         List<Animal> toFeed = new ArrayList<>(adults);
-        // sort by class to group same species
         toFeed.sort(Comparator.comparing(a -> a.getClass().getName()));
 
-        int i = 0;
-        while (i < toFeed.size() - 1) {
+        List<Animal> processed = new ArrayList<>();
+        for (int i = 0; i < toFeed.size(); i++) {
             Animal a1 = toFeed.get(i);
+            if (processed.contains(a1)) continue;
 
             Animal partner = null;
             for (int j = i + 1; j < toFeed.size(); j++) {
                 Animal a2 = toFeed.get(j);
-                if (a2.getClass() == a1.getClass() && !fedAnimals.contains(a2.getUUID())) {
+                if (!processed.contains(a2) && a2.getClass() == a1.getClass() && !fedAnimals.contains(a2.getUUID())) {
                     partner = a2;
                     break;
                 }
             }
-            if (partner == null) {
-                i++;
-                continue;
-            }
 
-            feedPair(a1, partner);
-            toFeed.remove(a1);
-            toFeed.remove(partner);
+            if (partner != null) {
+                feedPair(a1, partner);
+                processed.add(a1);
+                processed.add(partner);
+            }
         }
     }
 
@@ -362,15 +356,6 @@ public class AutoBreedModule extends ToggleableModule {
      * Returns true if the animal was successfully fed.
      */
     private boolean tryFeedAnimal(Animal animal) {
-        // Skip turtle if it has no home position (prevents crash)
-        if (animal instanceof Turtle) {
-            try {
-                animal.getClass().getDeclaredMethod("getHomePos"); // Just check method exists
-            } catch (Exception ignored) {
-                return false;
-            }
-        }
-
         List<Item> items = BREEDING_ITEMS.get(animal.getClass());
         if (items == null || items.isEmpty()) {
             return false;
@@ -382,18 +367,11 @@ public class AutoBreedModule extends ToggleableModule {
                 switchToItem(slot);
 
                 try {
-                    if (animal.getType().toString().contains("allay")) {
-                        return false;
-                    }
-
                     if (mc.player != null) {
                         mc.player.connection.send(
                                 ServerboundInteractPacket.createInteractionPacket(animal, false, InteractionHand.MAIN_HAND)
                         );
-
-                        if (!animal.getType().toString().contains("allay")) {
-                            mc.player.swing(InteractionHand.MAIN_HAND);
-                        }
+                        mc.player.swing(InteractionHand.MAIN_HAND);
                     }
                 } catch (Exception e) {
                     ChatUtils.print("Error feeding " + animal.getClass().getSimpleName() + ": " + e.getMessage());
@@ -498,41 +476,48 @@ public class AutoBreedModule extends ToggleableModule {
         if (fedAnimals.contains(animal.getUUID())) return false;
         if (animal.isInLove() || !animal.canFallInLove()) return false;
 
+        // Skip tamed animals not owned
+        if (animal instanceof TamableAnimal tamed) {
+            if (!tamed.isTame() || !tamed.isOwnedBy(mc.player)) {
+                return false;
+            }
+        }
+
+        // Keep baby turtles in the breeding logic
         if (animal.isBaby()) {
-            // We skip fedAnimals logic for babies => feed them infinitely
             return feedBabies.getValue() && isBreedingEnabled(animal);
         }
 
-        // must be tamed if Wolf or Cat
-        if (animal instanceof TamableAnimal t && !t.isTame()) return false;
         return isBreedingEnabled(animal);
     }
 
+    private final Map<Class<? extends Entity>, BooleanSetting> breedingSettings = new HashMap<>();
+    {
+        breedingSettings.put(Allay.class, breedAllays);
+        breedingSettings.put(Cow.class, breedCows);
+        breedingSettings.put(Sheep.class, breedSheep);
+        breedingSettings.put(Pig.class, breedPigs);
+        breedingSettings.put(Chicken.class, breedChickens);
+        breedingSettings.put(Wolf.class, breedWolves);
+        breedingSettings.put(Cat.class, breedCats);
+        breedingSettings.put(Fox.class, breedFoxes);
+        breedingSettings.put(Panda.class, breedPandas);
+        breedingSettings.put(Turtle.class, breedTurtles);
+        breedingSettings.put(Bee.class, breedBees);
+        breedingSettings.put(Frog.class, breedFrogs);
+        breedingSettings.put(Goat.class, breedGoats);
+        breedingSettings.put(Hoglin.class, breedHoglins);
+        breedingSettings.put(Strider.class, breedStriders);
+        breedingSettings.put(MushroomCow.class, breedMooshrooms);
+        breedingSettings.put(Rabbit.class, breedRabbits);
+        breedingSettings.put(Sniffer.class, breedSniffers);
+        breedingSettings.put(Camel.class, breedCamels);
+        breedingSettings.put(Axolotl.class, breedAxolotls);
+    }
+
     private boolean isBreedingEnabled(Entity entity) {
-        if (entity instanceof Allay) return breedAllays.getValue();
-        if (!(entity instanceof Animal animal)) return false;
-
-        if (animal instanceof Cow)         return breedCows.getValue();
-        if (animal instanceof Sheep)       return breedSheep.getValue();
-        if (animal instanceof Pig)         return breedPigs.getValue();
-        if (animal instanceof Chicken)     return breedChickens.getValue();
-        if (animal instanceof Wolf)        return breedWolves.getValue();
-        if (animal instanceof Cat)         return breedCats.getValue();
-        if (animal instanceof Fox)         return breedFoxes.getValue();
-        if (animal instanceof Panda)       return breedPandas.getValue();
-        if (animal instanceof Turtle)      return breedTurtles.getValue();
-        if (animal instanceof Bee)         return breedBees.getValue();
-        if (animal instanceof Frog)        return breedFrogs.getValue();
-        if (animal instanceof Goat)        return breedGoats.getValue();
-        if (animal instanceof Hoglin)      return breedHoglins.getValue();
-        if (animal instanceof Strider)     return breedStriders.getValue();
-        if (animal instanceof MushroomCow) return breedMooshrooms.getValue();
-        if (animal instanceof Rabbit)      return breedRabbits.getValue();
-        if (animal instanceof Sniffer)     return breedSniffers.getValue();
-        if (animal instanceof Camel)       return breedCamels.getValue();
-        if (animal instanceof Axolotl)     return breedAxolotls.getValue();
-
-        return false;
+        BooleanSetting setting = breedingSettings.get(entity.getClass());
+        return setting != null && setting.getValue();
     }
 
     // ========== FOLLOW MODE (just hold the lure item) ==========
